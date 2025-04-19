@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Caça-Níquel Clássico</title>
 
-    <!-- Materialize CSS (Ainda útil para a grid, mas vamos sobrescrever muito) -->
+    <!-- Materialize CSS -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
@@ -20,7 +20,7 @@
       rel="stylesheet"
     />
 
-    <!-- Google Font (Exemplo: 'Press Start 2P' para um look retro) -->
+    <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -96,9 +96,32 @@
         overflow: hidden;
         box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
         margin: 0 1% !important; /* Espaçamento entre slots */
-        width: 16% !important; /* Ajuste de largura para 5 slots */
+        width: 18% !important; /* Ajuste de largura para 5 slots */
         padding: 5px 0;
+        position: relative; /* Para o efeito de brilho */
+        transition: all 0.3s ease; /* Suaviza transições */
       }
+
+      /* Efeito de brilho para os slots quando param */
+      @keyframes slotGlow {
+        0% {
+          box-shadow: 0 0 5px 2px rgba(255, 215, 0, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.9);
+        }
+        100% {
+          box-shadow: 0 0 5px 2px rgba(255, 215, 0, 0.7);
+        }
+      }
+
+      /* Classe para aplicar o brilho */
+      #slots-container .col.slot-stopped {
+        animation: slotGlow 1.5s infinite;
+        border-color: gold;
+        z-index: 1; /* Garante que o brilho fique sobre outros elementos */
+      }
+
       /* Ajuste para o offset do primeiro slot */
       #slots-container #slot1 {
         margin-left: 5% !important; /* Ajuste do offset */
@@ -235,6 +258,70 @@
         color: white;
       } /* Verde para vitória */
 
+      #win-control-panel {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        border: 2px solid #ffc107;
+        border-radius: 8px;
+        padding: 10px;
+        color: white;
+        font-family: "Roboto", sans-serif;
+        z-index: 1000;
+        width: 200px;
+        transition: height 0.3s ease; /* Transição suave para altura */
+        overflow: hidden; /* Importante para a transição */
+      }
+
+      /* NOVO: Classe para o painel minimizado */
+      #win-control-panel.minimized {
+        height: 90px !important;
+      }
+
+      /* NOVO: Garantir que o título e botão fiquem visíveis quando minimizado */
+      #win-control-panel h5 {
+        font-size: 14px;
+        margin: 0 0 10px 0;
+        color: #ffc107;
+        text-align: center;
+      }
+
+      /* NOVO: Conteúdo do painel que será escondido */
+      #panel-content {
+        margin-top: 10px;
+      }
+
+      #win-control-panel label {
+        display: block;
+        margin: 5px 0;
+        color: white;
+        font-size: 12px;
+      }
+      #win-control-panel input[type="range"] {
+        width: 100%;
+      }
+      #win-control-panel input[type="checkbox"] {
+        margin-right: 5px;
+      }
+      #win-control-panel .value-display {
+        float: right;
+        color: #ffc107;
+      }
+      #win-control-panel button {
+        width: 100%;
+        margin-top: 10px;
+        background: #4a2c0f;
+        color: white;
+        border: none;
+        padding: 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #win-control-panel button:hover {
+        background: #6a3c1f;
+      }
+
       /* Esconder os elementos de áudio */
       audio {
         display: none;
@@ -249,7 +336,6 @@
 
       <!-- Área dos rolos (5 slots) -->
       <div id="slots-container" class="row center-align">
-        <!-- Ajustado para 5 colunas (s2 não funciona bem com % width, usamos classes customizadas) -->
         <div id="slot1" class="col">?</div>
         <div id="slot2" class="col">?</div>
         <div id="slot3" class="col">?</div>
@@ -310,12 +396,61 @@
     </div>
     <!-- Fim do slot-machine-body -->
 
-    <!-- Elementos de Áudio (coloque seus caminhos corretos aqui) -->
+    <!-- MODIFICADO: Painel de Controle de Manipulação com estrutura melhorada -->
+    <div id="win-control-panel">
+      <div class="panel-header">
+        <h5>CONTROLE DE VITÓRIAS</h5>
+        <button id="toggle-control-panel">Esconder</button>
+      </div>
+
+      <div id="panel-content">
+        <div>
+          <label>
+            <input type="checkbox" id="enable-win-manipulation" checked />
+            Ativar Manipulação
+          </label>
+        </div>
+        <div>
+          <label>
+            Chance de Vitória:
+            <span id="win-chance-value" class="value-display">20%</span>
+            <input
+              type="range"
+              id="win-chance-slider"
+              min="0"
+              max="100"
+              value="20"
+            />
+          </label>
+        </div>
+        <div>
+          <label>
+            <input type="checkbox" id="enable-pattern-manipulation" />
+            Forçar Padrão Específico
+          </label>
+        </div>
+        <div>
+          <label>
+            Símbolo:
+            <select id="forced-symbol-select">
+              <option value="0">🐯 Tigre</option>
+              <option value="1">💰 Dinheiro</option>
+              <option value="2">🌸 Flor</option>
+              <option value="3">🔔 Sino</option>
+              <option value="4">🍊 Laranja</option>
+              <option value="5">💎 Diamante</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Elementos de Áudio -->
     <audio id="spin-sound" src="sounds/spin_sound.mp3" preload="auto"></audio>
-    <audio id="stop-sound" src="stop.mp3" preload="auto"></audio>
-    <audio id="win-sound" src="vitoria.mp3" preload="auto"></audio>
+    <audio id="stop-sound" src="sounds/stop_sound.mp3" preload="auto"></audio>
+    <audio id="win-sound" src="sounds/win_sound.mp3" preload="auto"></audio>
     <audio id="lose-sound" src="sounds/lose_sound.mp3" preload="auto"></audio>
-    <audio id="click-sound" src="jogar.mp3" preload="auto"></audio>
+    <audio id="click-sound" src="sounds/click_sound.mp3" preload="auto"></audio>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
@@ -333,33 +468,31 @@
 
       // Referências de Áudio
       const spinSound = document.getElementById("spin-sound");
-      const stopSound = document.getElementById("stop-sound");
+      const stopSoundEffect = document.getElementById("stop-sound"); // ALTERADO: Renomeado para evitar conflito
       const winSound = document.getElementById("win-sound");
       const loseSound = document.getElementById("lose-sound");
       const clickSound = document.getElementById("click-sound");
 
+      // NOVO: Configurações de manipulação de vitória
+      let winManipulationEnabled = true;
+      let winChance = 20; // Porcentagem (0-100)
+      let patternManipulationEnabled = false;
+      let forcedSymbolIndex = 0; // Índice do símbolo forçado
+
       // Função para tocar som
       function playSound(soundElement) {
         if (soundElement && soundElement.readyState >= 2) {
-          // Verifica se o som está pronto
           soundElement.currentTime = 0;
           soundElement.play().catch((error) => {
             console.log("Erro ao tocar som (ignorado):", error.message);
-            // Navegadores podem bloquear autoplay antes da interação
           });
         } else if (soundElement) {
           console.log("Som não está pronto para tocar:", soundElement.id);
-          // Tenta tocar quando estiver pronto (pode não ser ideal para sons rápidos)
-          // soundElement.oncanplaythrough = () => {
-          //     soundElement.currentTime = 0;
-          //     soundElement.play().catch(e => console.log("Erro ao tocar som (oncanplaythrough):", e.message));
-          //     soundElement.oncanplaythrough = null; // Remove o listener
-          // };
         }
       }
 
-      // Função para parar som
-      function pararSom(soundElement) {
+      // Função para parar som - ALTERADO: Nome da função alterado para pauseSound
+      function pauseSound(soundElement) {
         if (soundElement) {
           soundElement.pause();
           soundElement.currentTime = 0;
@@ -369,17 +502,89 @@
       $(document).ready(function () {
         updateBetDisplay();
         updateBalanceDisplay();
-        M.AutoInit(); // Para Materialize (se usar algum componente JS deles)
+        M.AutoInit();
 
-        // Pré-carregar sons (tentativa) - navegadores podem ignorar
-        // try {
-        //     spinSound?.load();
-        //     stopSound?.load();
-        //     winSound?.load();
-        //     loseSound?.load();
-        //     clickSound?.load();
-        // } catch (e) { console.log("Erro ao pré-carregar sons:", e);}
+        // NOVO: Inicializa os controles de manipulação
+        initWinManipulationControls();
       });
+
+      // MODIFICADO: Função para inicializar os controles de manipulação
+      function initWinManipulationControls() {
+        // Atualiza o valor exibido do slider
+        $("#win-chance-slider").on("input", function () {
+          winChance = parseInt($(this).val());
+          $("#win-chance-value").text(winChance + "%");
+        });
+
+        // Checkbox para ativar/desativar manipulação
+        $("#enable-win-manipulation").change(function () {
+          winManipulationEnabled = $(this).is(":checked");
+        });
+
+        // Checkbox para ativar/desativar manipulação de padrão específico
+        $("#enable-pattern-manipulation").change(function () {
+          patternManipulationEnabled = $(this).is(":checked");
+        });
+
+        // Seletor de símbolo forçado
+        $("#forced-symbol-select").change(function () {
+          forcedSymbolIndex = parseInt($(this).val());
+        });
+
+        // CORRIGIDO: Botão para esconder/mostrar o painel
+        $("#toggle-control-panel").click(function () {
+          const panel = $("#win-control-panel");
+
+          // Alterna a classe 'minimized' para controlar a visibilidade
+          panel.toggleClass("minimized");
+
+          // Atualiza o texto do botão com base no estado atual
+          if (panel.hasClass("minimized")) {
+            $(this).text("Mostrar");
+          } else {
+            $(this).text("Esconder");
+          }
+        });
+
+        // Armazena a altura original do painel para referência
+        const originalHeight = $("#win-control-panel").height();
+        $("#win-control-panel").css("height", originalHeight);
+      }
+
+      // NOVO: Função de manipulação de vitória
+      function manipulateWinResult() {
+        // Objeto para retornar o resultado da manipulação
+        const result = {
+          manipulated: false,
+          finalSpins: [],
+        };
+
+        // Se a manipulação estiver desativada, retorna sem manipular
+        if (!winManipulationEnabled) {
+          return result;
+        }
+
+        // Determina se esta rodada será uma vitória com base na chance configurada
+        const isWin = Math.random() * 100 < winChance;
+
+        if (isWin) {
+          // Se a manipulação de padrão específico estiver ativada, usa o símbolo selecionado
+          // Caso contrário, escolhe um símbolo aleatório
+          const symbolIndex = patternManipulationEnabled
+            ? forcedSymbolIndex
+            : Math.floor(Math.random() * symbols.length);
+
+          // Cria um array com o mesmo símbolo repetido para todos os slots
+          for (let i = 0; i < numberOfSlots; i++) {
+            result.finalSpins.push(symbolIndex);
+          }
+
+          result.manipulated = true;
+          console.log("Vitória manipulada! Símbolo:", symbols[symbolIndex]);
+        }
+
+        return result;
+      }
 
       function increaseBet() {
         if (isSpinning) return;
@@ -405,8 +610,7 @@
       }
 
       function updateBetDisplay() {
-        // Atualiza o texto dentro do span, mantendo o "R$"
-        $("#current-bet").html(`Aposta: R$${currentBet}`); // Usar html() para re-renderizar
+        $("#current-bet").html(`Aposta: R$${currentBet}`);
       }
 
       function updateBalanceDisplay() {
@@ -421,16 +625,26 @@
         }
 
         isSpinning = true;
-        $("#spin-button").prop("disabled", true); // Desabilita via prop e CSS
-        $("#result-area").fadeOut().removeClass("win-glow"); // Esconde resultado e remove brilho
+        $("#spin-button").prop("disabled", true);
+        $("#result-area").fadeOut().removeClass("win-glow");
         spinningIntervals = [];
+
+        // Remove a classe de brilho de todos os slots antes de iniciar
+        for (let i = 1; i <= numberOfSlots; i++) {
+          $(`#slot${i}`).removeClass("slot-stopped");
+        }
 
         playSound(spinSound);
 
-        const finalSpins = [];
-        for (let i = 0; i < numberOfSlots; i++) {
-          finalSpins.push(Math.floor(Math.random() * symbols.length));
-        }
+        // NOVO: Aplica a manipulação de vitória
+        const manipulationResult = manipulateWinResult();
+
+        // Gera os resultados finais (manipulados ou aleatórios)
+        const finalSpins = manipulationResult.manipulated
+          ? manipulationResult.finalSpins
+          : Array.from({ length: numberOfSlots }, () =>
+              Math.floor(Math.random() * symbols.length)
+            );
 
         const spinSpeed = 80;
         const baseStopTime = 1000;
@@ -438,7 +652,6 @@
 
         for (let i = 0; i < numberOfSlots; i++) {
           const slotElement = $(`#slot${i + 1}`);
-          // slotElement.addClass('spinning'); // Classe opcional para estilo de giro
 
           const intervalId = setInterval(() => {
             const randomSymbolIndex = Math.floor(
@@ -452,8 +665,11 @@
           setTimeout(() => {
             clearInterval(spinningIntervals[i]);
             slotElement.text(symbols[finalSpins[i]]);
-            // slotElement.removeClass('spinning');
-            playSound(stopSound);
+
+            // Adiciona a classe de brilho quando o slot para
+            slotElement.addClass("slot-stopped");
+
+            playSound(stopSoundEffect); // ALTERADO: Usando o nome correto
 
             if (i === numberOfSlots - 1) {
               checkWinAndFinalize(finalSpins);
@@ -463,7 +679,7 @@
       }
 
       function checkWinAndFinalize(finalSpins) {
-        pararSom(spinSound); // Para o som de giro ANTES de tocar outros
+        pauseSound(spinSound); // ALTERADO: Usando a nova função pauseSound
 
         const firstSymbolIndex = finalSpins[0];
         const allEqual = finalSpins.every(
@@ -477,7 +693,7 @@
           );
           playSound(winSound);
           balance += currentBet * winMultiplier;
-          $("#result-area").addClass("win-glow"); // Adiciona brilho na vitória
+          $("#result-area").addClass("win-glow");
         } else {
           showResult("Não foi dessa vez...", "red");
           playSound(loseSound);
@@ -487,25 +703,31 @@
         updateBalanceDisplay();
         $("#spin-button").prop("disabled", false);
         isSpinning = false;
+
+        // Mantém o brilho nos slots por um tempo após o resultado
+        setTimeout(() => {
+          if (!isSpinning) {
+            for (let i = 1; i <= numberOfSlots; i++) {
+              $(`#slot${i}`).removeClass("slot-stopped");
+            }
+          }
+        }, 3000);
       }
 
       function showResult(text, cardColor) {
         $("#result-text").text(text);
-        // Remove classes de cor anteriores e adiciona a nova
         $("#result-area")
           .removeClass("red green darken-3 win-glow")
           .addClass(cardColor)
-          .fadeIn(); // Garante que win-glow seja removido se não for vitória
+          .fadeIn();
 
-        // Adiciona brilho se for vitória
         if (cardColor === "green") {
           $("#result-area").addClass("win-glow");
         }
 
-        // Esconde o resultado após 3 segundos
         setTimeout(() => {
           $("#result-area").fadeOut(function () {
-            $(this).removeClass("win-glow"); // Remove o brilho ao esconder
+            $(this).removeClass("win-glow");
           });
         }, 3000);
       }
