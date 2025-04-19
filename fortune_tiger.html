@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Caça-Níquel Clássico</title>
+
+    <!-- Materialize CSS (Ainda útil para a grid, mas vamos sobrescrever muito) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+
+    <!-- jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <!-- Material Icons -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+
+    <!-- Google Font (Exemplo: 'Press Start 2P' para um look retro) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* Reset básico e fonte padrão */
+      body,
+      html {
+        height: 100%;
+        margin: 0;
+        background: linear-gradient(to bottom, #333, #111); /* Fundo escuro */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: "Roboto", sans-serif; /* Fonte padrão mais legível */
+      }
+
+      /* O Corpo da Máquina */
+      .slot-machine-body {
+        background: linear-gradient(
+          to bottom,
+          #d4af37,
+          #b8860b,
+          #d4af37
+        ); /* Gradiente Dourado */
+        border: 10px solid #4a2c0f; /* Borda marrom escura (madeira?) */
+        border-radius: 25px;
+        padding: 30px 20px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.7),
+          inset 0 0 15px rgba(255, 215, 0, 0.5);
+        width: 90%;
+        max-width: 500px; /* Largura ajustada */
+        position: relative; /* Para posicionar elementos internos */
+      }
+
+      /* Título com estilo retro */
+      .slot-title {
+        font-family: "Press Start 2P", cursive; /* Fonte Pixelada */
+        color: #fff;
+        text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000,
+          -2px 2px 0 #000, 3px 3px 5px rgba(0, 0, 0, 0.8);
+        text-align: center;
+        margin-bottom: 25px;
+        font-size: 1.5rem; /* Ajuste tamanho */
+        line-height: 1.3;
+      }
+
+      /* Área dos Rolos */
+      #slots-container {
+        background-color: #1a1a1a; /* Fundo bem escuro */
+        border: 5px solid #555;
+        border-radius: 10px;
+        padding: 15px 5px; /* Espaçamento interno */
+        margin-bottom: 25px;
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+      }
+
+      /* Slots Individuais */
+      #slots-container .col {
+        background-color: #f0f0f0; /* Fundo claro para contraste */
+        border: 2px solid #888;
+        border-radius: 5px;
+        color: #333;
+        font-size: 2.8rem; /* Símbolos maiores */
+        font-weight: bold;
+        min-height: 80px; /* Altura maior */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+        margin: 0 1% !important; /* Espaçamento entre slots */
+        width: 16% !important; /* Ajuste de largura para 5 slots */
+        padding: 5px 0;
+      }
+      /* Ajuste para o offset do primeiro slot */
+      #slots-container #slot1 {
+        margin-left: 5% !important; /* Ajuste do offset */
+      }
+
+      /* Controles de Aposta e Displays */
+      .controls-display-area {
+        background-color: #3a3a3a;
+        border: 3px solid #555;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.6);
+      }
+
+      .bet-controls .col,
+      .balance-display .col {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #ffc107; /* Cor amarela/dourada para texto */
+        font-family: "Press Start 2P", cursive; /* Fonte pixelada */
+        font-size: 0.9rem; /* Tamanho ajustado */
+      }
+
+      /* Botões +/- */
+      .bet-controls button {
+        font-family: "Press Start 2P", cursive;
+        font-size: 1.2rem;
+        border-radius: 50%; /* Botões redondos */
+        width: 50px;
+        height: 50px;
+        line-height: 50px; /* Centralizar texto verticalmente */
+        padding: 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4),
+          inset 0 -2px 3px rgba(0, 0, 0, 0.3);
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+      }
+      .bet-controls button:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4),
+          inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+      }
+      .bet-controls .red {
+        background-color: #d32f2f !important;
+      }
+      .bet-controls .green {
+        background-color: #388e3c !important;
+      }
+
+      /* Display de Aposta e Saldo */
+      #current-bet,
+      #balance-area {
+        background-color: #000;
+        color: #00ff00; /* Verde LCD */
+        padding: 8px 10px;
+        border-radius: 4px;
+        border: 2px solid #444;
+        text-align: center;
+        box-shadow: inset 0 0 5px rgba(0, 255, 0, 0.5);
+        margin: 0 5px; /* Espaçamento */
+      }
+      #balance-area {
+        margin-top: 10px;
+        font-size: 1rem;
+      }
+
+      /* Botão Girar Principal */
+      #spin-button-container {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      #spin-button {
+        font-family: "Press Start 2P", cursive;
+        font-size: 1.3rem;
+        background: linear-gradient(
+          to bottom,
+          #ff8c00,
+          #cd6600
+        ); /* Laranja/Bronze */
+        color: white;
+        border: 3px solid #4a2c0f;
+        border-radius: 15px;
+        padding: 15px 30px;
+        text-shadow: 1px 1px 2px black;
+        box-shadow: 0 6px 10px rgba(0, 0, 0, 0.5),
+          inset 0 -3px 5px rgba(0, 0, 0, 0.3);
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        cursor: pointer;
+      }
+      #spin-button:hover:not(:disabled) {
+        background: linear-gradient(to bottom, #ffa500, #d87000);
+      }
+      #spin-button:active:not(:disabled) {
+        transform: translateY(3px);
+        box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5),
+          inset 0 -2px 3px rgba(0, 0, 0, 0.3);
+      }
+      #spin-button:disabled {
+        background: linear-gradient(to bottom, #888, #666);
+        cursor: not-allowed;
+        opacity: 0.7;
+        box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5),
+          inset 0 -2px 3px rgba(0, 0, 0, 0.3);
+      }
+      #spin-button i {
+        font-size: 1.5rem; /* Ícone maior */
+        vertical-align: middle;
+        margin-left: 10px;
+      }
+
+      /* Área de Resultado */
+      #result-area {
+        margin-top: 15px;
+        border-radius: 8px;
+        font-family: "Press Start 2P", cursive;
+        font-size: 1rem;
+        text-align: center;
+        padding: 10px;
+        box-shadow: 0 0 15px yellow; /* Brilho amarelo na vitória */
+        transition: box-shadow 0.3s ease-in-out;
+      }
+      #result-area.win-glow {
+        /* Classe adicionada via JS na vitória */
+        box-shadow: 0 0 25px 10px yellow, 0 0 15px 5px gold;
+      }
+      #result-area.red {
+        background-color: #b71c1c !important;
+        color: white;
+        box-shadow: none;
+      } /* Vermelho para perda */
+      #result-area.green {
+        background-color: #1b5e20 !important;
+        color: white;
+      } /* Verde para vitória */
+
+      /* Esconder os elementos de áudio */
+      audio {
+        display: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Corpo da Máquina Caça-Níquel -->
+    <div class="slot-machine-body">
+      <h4 class="slot-title">FORTUNE TIGER CLASSIC</h4>
+
+      <!-- Área dos rolos (5 slots) -->
+      <div id="slots-container" class="row center-align">
+        <!-- Ajustado para 5 colunas (s2 não funciona bem com % width, usamos classes customizadas) -->
+        <div id="slot1" class="col">?</div>
+        <div id="slot2" class="col">?</div>
+        <div id="slot3" class="col">?</div>
+        <div id="slot4" class="col">?</div>
+        <div id="slot5" class="col">?</div>
+      </div>
+
+      <!-- Área de Controles e Displays -->
+      <div class="controls-display-area">
+        <!-- Botões de aposta -->
+        <div class="row center-align bet-controls no-margin-bottom">
+          <div class="col s4">
+            <button
+              onclick="decreaseBet()"
+              class="btn waves-effect waves-light red"
+            >
+              -
+            </button>
+          </div>
+          <div id="current-bet" class="col s4">Aposta: R$10</div>
+          <div class="col s4">
+            <button
+              onclick="increaseBet()"
+              class="btn waves-effect waves-light green"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <!-- Saldo do jogador -->
+        <div class="row center-align balance-display no-margin-bottom">
+          <div class="col s12">
+            <div id="balance-area">Saldo: R$<span id="balance">100</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botão de girar -->
+      <div id="spin-button-container" class="row center-align">
+        <div class="col s12">
+          <button id="spin-button">
+            GIRAR<i class="material-icons right">play_circle_filled</i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Resultado da rodada -->
+      <div class="row center-align">
+        <div class="col s12">
+          <div id="result-area" class="card red darken-3" style="display: none">
+            <div class="card-content white-text">
+              <span id="result-text">Você ganhou!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Fim do slot-machine-body -->
+
+    <!-- Elementos de Áudio (coloque seus caminhos corretos aqui) -->
+    <audio id="spin-sound" src="sounds/spin_sound.mp3" preload="auto"></audio>
+    <audio id="stop-sound" src="stop.mp3" preload="auto"></audio>
+    <audio id="win-sound" src="vitoria.mp3" preload="auto"></audio>
+    <audio id="lose-sound" src="sounds/lose_sound.mp3" preload="auto"></audio>
+    <audio id="click-sound" src="jogar.mp3" preload="auto"></audio>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+      // Configurações iniciais
+      let currentBet = 10;
+      let balance = 100;
+      const numberOfSlots = 5;
+      const winMultiplier = 5;
+      const symbols = ["🐯", "💰", "🌸", "🔔", "🍊", "💎"];
+
+      // Variáveis para controlar a animação
+      let spinningIntervals = [];
+      let isSpinning = false;
+
+      // Referências de Áudio
+      const spinSound = document.getElementById("spin-sound");
+      const stopSound = document.getElementById("stop-sound");
+      const winSound = document.getElementById("win-sound");
+      const loseSound = document.getElementById("lose-sound");
+      const clickSound = document.getElementById("click-sound");
+
+      // Função para tocar som
+      function playSound(soundElement) {
+        if (soundElement && soundElement.readyState >= 2) {
+          // Verifica se o som está pronto
+          soundElement.currentTime = 0;
+          soundElement.play().catch((error) => {
+            console.log("Erro ao tocar som (ignorado):", error.message);
+            // Navegadores podem bloquear autoplay antes da interação
+          });
+        } else if (soundElement) {
+          console.log("Som não está pronto para tocar:", soundElement.id);
+          // Tenta tocar quando estiver pronto (pode não ser ideal para sons rápidos)
+          // soundElement.oncanplaythrough = () => {
+          //     soundElement.currentTime = 0;
+          //     soundElement.play().catch(e => console.log("Erro ao tocar som (oncanplaythrough):", e.message));
+          //     soundElement.oncanplaythrough = null; // Remove o listener
+          // };
+        }
+      }
+
+      // Função para parar som
+      function pararSom(soundElement) {
+        if (soundElement) {
+          soundElement.pause();
+          soundElement.currentTime = 0;
+        }
+      }
+
+      $(document).ready(function () {
+        updateBetDisplay();
+        updateBalanceDisplay();
+        M.AutoInit(); // Para Materialize (se usar algum componente JS deles)
+
+        // Pré-carregar sons (tentativa) - navegadores podem ignorar
+        // try {
+        //     spinSound?.load();
+        //     stopSound?.load();
+        //     winSound?.load();
+        //     loseSound?.load();
+        //     clickSound?.load();
+        // } catch (e) { console.log("Erro ao pré-carregar sons:", e);}
+      });
+
+      function increaseBet() {
+        if (isSpinning) return;
+        if (currentBet < balance) {
+          currentBet++;
+          updateBetDisplay();
+          playSound(clickSound);
+        } else {
+          M.toast({
+            html: "Aposta não pode exceder o saldo!",
+            classes: "red darken-2",
+          });
+        }
+      }
+
+      function decreaseBet() {
+        if (isSpinning) return;
+        if (currentBet > 1) {
+          currentBet--;
+          updateBetDisplay();
+          playSound(clickSound);
+        }
+      }
+
+      function updateBetDisplay() {
+        // Atualiza o texto dentro do span, mantendo o "R$"
+        $("#current-bet").html(`Aposta: R$${currentBet}`); // Usar html() para re-renderizar
+      }
+
+      function updateBalanceDisplay() {
+        $("#balance").text(balance);
+      }
+
+      function spin() {
+        if (isSpinning) return;
+        if (balance < currentBet) {
+          M.toast({ html: "Saldo insuficiente!", classes: "red darken-2" });
+          return;
+        }
+
+        isSpinning = true;
+        $("#spin-button").prop("disabled", true); // Desabilita via prop e CSS
+        $("#result-area").fadeOut().removeClass("win-glow"); // Esconde resultado e remove brilho
+        spinningIntervals = [];
+
+        playSound(spinSound);
+
+        const finalSpins = [];
+        for (let i = 0; i < numberOfSlots; i++) {
+          finalSpins.push(Math.floor(Math.random() * symbols.length));
+        }
+
+        const spinSpeed = 80;
+        const baseStopTime = 1000;
+        const staggerStopTime = 700;
+
+        for (let i = 0; i < numberOfSlots; i++) {
+          const slotElement = $(`#slot${i + 1}`);
+          // slotElement.addClass('spinning'); // Classe opcional para estilo de giro
+
+          const intervalId = setInterval(() => {
+            const randomSymbolIndex = Math.floor(
+              Math.random() * symbols.length
+            );
+            slotElement.text(symbols[randomSymbolIndex]);
+          }, spinSpeed);
+
+          spinningIntervals.push(intervalId);
+
+          setTimeout(() => {
+            clearInterval(spinningIntervals[i]);
+            slotElement.text(symbols[finalSpins[i]]);
+            // slotElement.removeClass('spinning');
+            playSound(stopSound);
+
+            if (i === numberOfSlots - 1) {
+              checkWinAndFinalize(finalSpins);
+            }
+          }, baseStopTime + i * staggerStopTime);
+        }
+      }
+
+      function checkWinAndFinalize(finalSpins) {
+        pararSom(spinSound); // Para o som de giro ANTES de tocar outros
+
+        const firstSymbolIndex = finalSpins[0];
+        const allEqual = finalSpins.every(
+          (spinIndex) => spinIndex === firstSymbolIndex
+        );
+
+        if (allEqual) {
+          showResult(
+            `GANHOU! ${symbols[firstSymbolIndex].repeat(numberOfSlots)}!`,
+            "green"
+          );
+          playSound(winSound);
+          balance += currentBet * winMultiplier;
+          $("#result-area").addClass("win-glow"); // Adiciona brilho na vitória
+        } else {
+          showResult("Não foi dessa vez...", "red");
+          playSound(loseSound);
+          balance -= currentBet;
+        }
+
+        updateBalanceDisplay();
+        $("#spin-button").prop("disabled", false);
+        isSpinning = false;
+      }
+
+      function showResult(text, cardColor) {
+        $("#result-text").text(text);
+        // Remove classes de cor anteriores e adiciona a nova
+        $("#result-area")
+          .removeClass("red green darken-3 win-glow")
+          .addClass(cardColor)
+          .fadeIn(); // Garante que win-glow seja removido se não for vitória
+
+        // Adiciona brilho se for vitória
+        if (cardColor === "green") {
+          $("#result-area").addClass("win-glow");
+        }
+
+        // Esconde o resultado após 3 segundos
+        setTimeout(() => {
+          $("#result-area").fadeOut(function () {
+            $(this).removeClass("win-glow"); // Remove o brilho ao esconder
+          });
+        }, 3000);
+      }
+
+      // Conecta o botão de girar
+      $("#spin-button").click(spin);
+    </script>
+  </body>
+</html>

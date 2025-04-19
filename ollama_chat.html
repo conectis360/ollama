@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat com Ollama Local</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Adicionar Marked.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+      /* Adicionar estilos básicos para elementos Markdown */
+      .ai-message code {
+        background-color: #eee;
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+      .ai-message pre {
+        background-color: #eee;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto; /* Scroll horizontal para blocos de código longos */
+      }
+      .ai-message pre code {
+        background-color: transparent; /* Evita fundo duplo */
+        padding: 0;
+      }
+      .ai-message ul,
+      .ai-message ol {
+        padding-left: 20px; /* Indentação para listas */
+      }
+      .ai-message blockquote {
+        border-left: 3px solid #ccc;
+        padding-left: 10px;
+        margin-left: 0;
+        color: #666;
+        font-style: italic;
+      }
+      body {
+        font-family: sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #f4f4f4;
+        margin: 0;
+      }
+      #chat-container {
+        width: 90%;
+        max-width: 600px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        height: 80vh; /* Altura definida */
+      }
+      #chat-box {
+        flex-grow: 1;
+        overflow-y: auto; /* Habilita scroll */
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        flex-direction: column; /* Mensagens empilhadas */
+      }
+      .message {
+        margin-bottom: 15px;
+        padding: 10px 15px;
+        border-radius: 18px;
+        max-width: 80%;
+        word-wrap: break-word; /* Quebra palavras longas */
+      }
+      .user-message {
+        background-color: #007bff;
+        color: white;
+        align-self: flex-end; /* Alinha à direita */
+        border-bottom-right-radius: 5px;
+      }
+      .ai-message {
+        background-color: #e9e9eb;
+        color: #333;
+        align-self: flex-start; /* Alinha à esquerda */
+        border-bottom-left-radius: 5px;
+      }
+      #input-area {
+        display: flex;
+        padding: 15px;
+        border-top: 1px solid #eee; /* Linha separadora */
+      }
+      #user-input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        margin-right: 10px;
+        font-size: 1em;
+      }
+      #send-button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background-color 0.2s;
+      }
+      #send-button:hover {
+        background-color: #0056b3;
+      }
+      /* Estilo para feedback de carregamento */
+      .loading-message {
+        font-style: italic;
+        color: #888;
+        align-self: flex-start;
+      }
+      #input-area {
+        display: flex;
+        padding: 10px 15px; /* Ajuste o padding se necessário */
+        border-top: 1px solid #eee;
+        background-color: #fff; /* Garante fundo branco */
+        align-items: flex-end; /* Alinha o botão com a base do textarea */
+      }
+
+      #user-input {
+        /* Agora estiliza o TEXTAREA */
+        flex-grow: 1;
+        padding: 10px 15px; /* Mais padding interno */
+        border: 1px solid #ccc;
+        border-radius: 18px; /* Borda arredondada */
+        margin-right: 10px;
+        font-size: 1em;
+        font-family: inherit; /* Usa a mesma fonte do body */
+        line-height: 1.4; /* Melhora espaçamento entre linhas */
+        resize: none; /* Desabilita redimensionamento manual pelo usuário */
+        overflow-y: hidden; /* Esconde a barra de rolagem inicialmente (JS vai gerenciar) */
+        min-height: 20px; /* Altura mínima para garantir visibilidade */
+        max-height: 150px; /* Altura máxima antes de mostrar scroll (ajuste conforme preferir) */
+        box-sizing: border-box; /* Garante que padding/border não aumentem o tamanho total */
+      }
+
+      #send-button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background-color 0.2s;
+        height: 42px; /* Altura fixa para alinhar melhor (ajuste conforme padding do textarea) */
+        align-self: flex-end; /* Garante que fique na base */
+      }
+
+      #send-button:hover {
+        background-color: #0056b3;
+      }
+      body {
+        font-family: sans-serif;
+        display: flex;
+        /* !!! MUDANÇA: Organizar verticalmente !!! */
+        flex-direction: column;
+        justify-content: center; /* Centraliza verticalmente (com espaço extra) */
+        align-items: center;
+        min-height: 100vh;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 10px 0; /* Adiciona um pouco de espaço vertical */
+      }
+
+      /* !!! NOVO: Estilos para o seletor de modelo !!! */
+      #model-selector-container {
+        width: 90%;
+        max-width: 600px; /* Mesma largura do chat */
+        margin-bottom: 15px; /* Espaço entre seletor e chat */
+        padding: 10px 15px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        display: flex; /* Alinha label e select */
+        align-items: center; /* Centraliza verticalmente */
+        justify-content: center; /* Centraliza horizontalmente */
+        box-sizing: border-box;
+      }
+      #model-selector-container label {
+        margin-right: 10px;
+        font-weight: bold;
+        white-space: nowrap; /* Evita quebra de linha no label */
+      }
+      #model-selector {
+        padding: 5px 8px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        font-size: 0.95em;
+        flex-grow: 1; /* Ocupa espaço disponível */
+        max-width: 70%; /* Limita a largura máxima */
+      }
+
+      #chat-container {
+        width: 90%;
+        max-width: 600px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        /* !!! MUDANÇA: Altura pode precisar de ajuste ou ser flexível !!! */
+        /* height: 80vh; */ /* Comentado - altura pode ser mais dinâmica agora */
+        height: calc(
+          85vh - 60px
+        ); /* Exemplo: Altura da viewport menos espaço para o seletor */
+        min-height: 400px; /* Altura mínima */
+      }
+      /* ... Restante do seu CSS ... */
+
+      /* Adicionar estilos básicos para elementos Markdown */
+      .ai-message code {
+        background-color: #f0f0f0; /* Fundo um pouco mais escuro */
+        padding: 0.2em 0.4em; /* Padding sutil */
+        margin: 0;
+        font-size: 85%;
+        border-radius: 3px;
+        font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier,
+          monospace; /* Fontes monoespaçadas comuns */
+      }
+      .ai-message pre {
+        background-color: #f6f8fa; /* Fundo claro para blocos */
+        padding: 16px;
+        border-radius: 6px;
+        overflow-x: auto; /* Scroll horizontal */
+        margin: 10px 0; /* Espaçamento vertical */
+        border: 1px solid #ddd; /* Borda sutil */
+      }
+      .ai-message pre code {
+        background-color: transparent; /* Sem fundo duplo */
+        padding: 0;
+        border: none; /* Sem borda interna */
+        font-size: inherit; /* Herda tamanho da fonte do pre */
+      }
+      .ai-message ul,
+      .ai-message ol {
+        padding-left: 30px; /* Maior indentação */
+        margin: 10px 0;
+      }
+      .ai-message li {
+        margin-bottom: 5px; /* Espaço entre itens da lista */
+      }
+      .ai-message blockquote {
+        border-left: 4px solid #dfe2e5; /* Borda mais visível */
+        padding-left: 15px;
+        margin-left: 0;
+        color: #6a737d; /* Cor mais suave */
+        font-style: normal; /* Remove itálico padrão se não desejar */
+        margin: 10px 0;
+      }
+      .ai-message h1,
+      .ai-message h2,
+      .ai-message h3 {
+        margin-top: 15px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+      }
+      .ai-message h1 {
+        font-size: 1.8em;
+      }
+      .ai-message h2 {
+        font-size: 1.5em;
+      }
+      .ai-message h3 {
+        font-size: 1.25em;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- !!! NOVO: Seletor de Modelo !!! -->
+    <div id="model-selector-container">
+      <label for="model-selector">Modelo:</label>
+      <select id="model-selector">
+        <!-- Opções serão adicionadas pelo JavaScript -->
+      </select>
+    </div>
+
+    <div id="chat-container">
+      <div id="chat-box">
+        <!-- Mensagens do chat aparecerão aqui -->
+        <div class="message ai-message">
+          Olá! Selecione um modelo e envie uma mensagem.
+        </div>
+      </div>
+      <div id="input-area">
+        <textarea
+          id="user-input"
+          rows="1"
+          placeholder="Digite sua mensagem... (Shift+Enter para nova linha)"
+        ></textarea>
+        <button id="send-button">Enviar</button>
+      </div>
+    </div>
+
+    <script>
+      $(document).ready(function () {
+        // --- Configuração ---
+        const ollamaApiUrl = "http://localhost:11434/api/chat"; // Endpoint de chat
+        const userInput = $("#user-input");
+        const chatBox = $("#chat-box");
+        const sendButton = $("#send-button");
+        const modelSelector = $("#model-selector"); // Referência ao select
+
+        // Modelos disponíveis (adicione mais conforme necessário)
+        const availableModels = [
+          "gemma3:1b-it-qat",
+          "deepseek-r1:14b",
+          "deepseek-r1:1.5b",
+          // "outro-modelo:latest"
+        ];
+
+        // Popula o dropdown de modelos
+        availableModels.forEach((model) => {
+          modelSelector.append(
+            $("<option>", {
+              value: model,
+              text: model,
+            })
+          );
+        });
+
+        let conversationHistory = []; // Mantém o histórico da conversa atual
+        let currentAiMessageElement = null; // Referência jQuery ao elemento da msg da IA sendo construída
+        let accumulatedRawResponse = ""; // Acumula a resposta crua (Markdown) para parse final e histórico
+
+        // --- Funções Auxiliares ---
+
+        // Escapa HTML para exibição segura
+        function escapeHtml(unsafe) {
+          if (typeof unsafe !== "string") return ""; // Garante que é string
+          const element = document.createElement("div");
+          element.innerText = unsafe;
+          return element.innerHTML;
+        }
+
+        // Adiciona botões de cópia aos blocos <pre> dentro de um elemento
+        function addCopyButtonsToElement(element) {
+          if (!element || !element.jquery || element.length === 0) return; // Verifica se é um elemento jQuery válido
+
+          // Encontra todos os <pre> dentro do elemento da mensagem
+          const preBlocks = element.find("pre");
+
+          preBlocks.each(function () {
+            const preElement = $(this);
+            const codeElement = preElement.find("code");
+
+            // Só adiciona se houver um <code> e ainda não tiver um wrapper/botão
+            if (
+              codeElement.length > 0 &&
+              preElement.parent(":not(.code-block-wrapper)").length > 0
+            ) {
+              // 1. Cria o wrapper e envolve o <pre>
+              const wrapper = $('<div class="code-block-wrapper"></div>');
+              preElement.wrap(wrapper);
+
+              // 2. Cria o botão "Copiar"
+              const copyButton = $(
+                '<button class="copy-code-button">Copiar</button>'
+              );
+
+              // 3. Adiciona o listener de clique ao botão
+              copyButton.on("click", function () {
+                const button = $(this);
+                const codeToCopy = codeElement.text(); // Pega o texto puro do <code>
+
+                navigator.clipboard
+                  .writeText(codeToCopy)
+                  .then(() => {
+                    // Sucesso: Feedback visual
+                    button.text("Copiado!");
+                    button.addClass("copied");
+                    setTimeout(() => {
+                      button.text("Copiar");
+                      button.removeClass("copied");
+                    }, 2000); // Volta ao normal após 2 segundos
+                  })
+                  .catch((err) => {
+                    console.error("Falha ao copiar código: ", err);
+                    button.text("Erro!");
+                    setTimeout(() => {
+                      button.text("Copiar");
+                    }, 2000);
+                  });
+              });
+
+              // 4. Adiciona o botão ao wrapper (como irmão do <pre>)
+              // Usamos .parent() porque wrap() colocou o <pre> dentro do wrapper
+              preElement.parent().append(copyButton);
+            }
+          });
+        }
+
+        // Exibe/Atualiza a mensagem da IA (lida com chunks e parse final)
+        function displayAiChunk(chunkText, isFinal = false) {
+          // Cria o elemento da mensagem da IA se ainda não existir para esta resposta
+          if (!currentAiMessageElement) {
+            const messageDiv = $('<div class="message ai-message"></div>');
+            chatBox.append(messageDiv);
+            currentAiMessageElement = messageDiv; // Guarda a referência jQuery
+          }
+
+          // Processa chunks intermediários
+          if (!isFinal) {
+            accumulatedRawResponse += chunkText;
+            // Atualiza o HTML com o conteúdo *escapado* + <br> para visualização imediata
+            // Usamos .html() para permitir as tags <br>
+            currentAiMessageElement.html(
+              escapeHtml(accumulatedRawResponse).replace(/\n/g, "<br>")
+            );
+          }
+          // Processa o final da resposta
+          else {
+            if (currentAiMessageElement) {
+              // Garante que o elemento existe
+              // Parse final de TODO o Markdown acumulado
+              const finalHtml = marked.parse(accumulatedRawResponse);
+              currentAiMessageElement.html(finalHtml); // Substitui pelo HTML renderizado
+
+              // Adiciona os botões de cópia ao elemento finalizado
+              addCopyButtonsToElement(currentAiMessageElement);
+
+              // Adiciona a resposta completa ao histórico APENAS SE houver conteúdo
+              if (accumulatedRawResponse.trim()) {
+                conversationHistory.push({
+                  role: "assistant",
+                  content: accumulatedRawResponse,
+                });
+              }
+
+              // Limpa para a próxima mensagem da IA
+              currentAiMessageElement = null;
+              accumulatedRawResponse = "";
+            } else {
+              // Caso estranho onde isFinal=true mas não há elemento (ex: erro antes do 1º chunk)
+              console.warn(
+                "Tentativa de finalizar displayAiChunk sem currentAiMessageElement."
+              );
+              accumulatedRawResponse = ""; // Limpa mesmo assim
+            }
+          }
+
+          // Auto-scroll para o fundo do chat
+          chatBox.scrollTop(chatBox[0].scrollHeight);
+        }
+
+        // Exibe a mensagem do usuário
+        function displayUserMessage(text) {
+          const escapedText = escapeHtml(text); // Escapa a entrada do usuário
+          const messageDiv = `<div class="message user-message">${escapedText}</div>`;
+          chatBox.append(messageDiv);
+          chatBox.scrollTop(chatBox[0].scrollHeight);
+        }
+
+        // Ajusta a altura do textarea dinamicamente
+        function autoResizeTextarea() {
+          userInput.css("height", "auto"); // Reseta altura para calcular corretamente
+          let scrollHeight = userInput[0].scrollHeight;
+          let maxHeight = parseInt(userInput.css("max-height"), 10) || 200; // Define um max-height padrão se não houver CSS
+          if (scrollHeight > maxHeight) {
+            userInput.css("height", maxHeight + "px");
+            userInput.css("overflow-y", "auto");
+          } else {
+            userInput.css("height", scrollHeight + "px");
+            userInput.css("overflow-y", "hidden");
+          }
+        }
+
+        // Reseta a altura do textarea (ex: após envio)
+        function resetTextareaHeight() {
+          userInput.css("height", "auto");
+          userInput.css("overflow-y", "hidden");
+          autoResizeTextarea(); // Reajusta para o tamanho mínimo
+        }
+
+        // Função principal para chamar a API Ollama
+        async function callOllamaApi() {
+          // console.log("Chamando callOllamaApi..."); // Log para depuração
+
+          // Desabilita interface durante a requisição
+          sendButton.prop("disabled", true);
+          userInput.prop("disabled", true);
+          currentAiMessageElement = null; // Reseta referência da mensagem da IA
+          accumulatedRawResponse = ""; // Reseta acumulador
+
+          // Pega o modelo selecionado no dropdown
+          const selectedModel = modelSelector.val();
+          if (!selectedModel) {
+            displayUserMessage(
+              escapeHtml("Erro: Nenhum modelo selecionado."),
+              "ai"
+            ); // Mostra erro como msg
+            sendButton.prop("disabled", false); // Reabilita
+            userInput.prop("disabled", false);
+            return; // Interrompe
+          }
+
+          // Monta o corpo da requisição
+          const requestData = {
+            model: selectedModel,
+            messages: conversationHistory, // Envia o histórico completo
+            stream: true, // Habilita o streaming
+          };
+
+          // console.log("Enviando requisição para Ollama:", requestData); // Log para depuração
+
+          try {
+            const response = await fetch(ollamaApiUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(requestData),
+            });
+
+            // console.log("Resposta recebida, status:", response.status); // Log para depuração
+
+            // Trata erros HTTP (ex: 404, 500)
+            if (!response.ok) {
+              let errorBody = await response.text(); // Tenta ler corpo do erro
+              let errorMessage = `Erro na API (${selectedModel}): ${response.status} ${response.statusText}`;
+              try {
+                const errorJson = JSON.parse(errorBody);
+                errorMessage += ` - ${errorJson.error || errorBody}`;
+              } catch (e) {
+                errorMessage += ` - ${errorBody}`;
+              }
+              console.error("Erro da API Ollama:", errorMessage);
+              displayUserMessage(escapeHtml(errorMessage), "ai"); // Mostra erro como msg
+              // Remove a última mensagem do usuário do histórico, pois falhou
+              if (
+                conversationHistory.length > 0 &&
+                conversationHistory[conversationHistory.length - 1].role ===
+                  "user"
+              ) {
+                conversationHistory.pop();
+              }
+              throw new Error(errorMessage); // Interrompe a execução do try
+            }
+
+            // Processa o stream da resposta
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = ""; // Buffer para chunks parciais de JSON
+
+            while (true) {
+              const { value, done } = await reader.read();
+
+              if (done) {
+                // console.log("Stream finalizado."); // Log para depuração
+                // Garante que o último chunk seja processado e botões adicionados
+                if (accumulatedRawResponse || currentAiMessageElement) {
+                  displayAiChunk("", true); // Chama com isFinal=true para parsear e adicionar ao histórico
+                }
+                break; // Sai do loop de leitura
+              }
+
+              // Decodifica o chunk e adiciona ao buffer
+              buffer += decoder.decode(value, { stream: true });
+
+              // Processa linhas completas de JSON no buffer
+              let boundary = buffer.indexOf("\n");
+              while (boundary !== -1) {
+                const jsonLine = buffer.substring(0, boundary);
+                buffer = buffer.substring(boundary + 1); // Remove a linha processada
+
+                if (jsonLine.trim()) {
+                  // Ignora linhas vazias
+                  // console.log("Chunk JSON recebido:", jsonLine); // Log para depuração
+                  try {
+                    const jsonData = JSON.parse(jsonLine);
+
+                    // Verifica se há conteúdo na mensagem do chunk
+                    if (jsonData.message && jsonData.message.content) {
+                      displayAiChunk(jsonData.message.content, false); // Exibe chunk intermediário
+                    }
+
+                    // Verifica se é o JSON final do stream (contém métricas, etc.)
+                    // A propriedade 'done' no JSON indica o fim LÓGICO do stream Ollama
+                    if (jsonData.done) {
+                      // console.log("Recebido 'done: true' do Ollama."); // Log para depuração
+                      // O processamento final (parse, add histórico, botões) é feito
+                      // quando done=true é recebido OU quando o reader.read() retorna done=true.
+                      // A chamada displayAiChunk("", true) no bloco 'if (done)' acima ou no final garante isso.
+                      // Não precisamos fazer nada especial aqui, apenas saber que chegou ao fim lógico.
+                    }
+                  } catch (e) {
+                    console.warn(
+                      "Erro ao parsear linha JSON do stream:",
+                      jsonLine,
+                      e
+                    );
+                    // Continua tentando processar o resto do buffer/stream
+                  }
+                }
+                boundary = buffer.indexOf("\n"); // Procura a próxima linha no buffer atualizado
+              }
+            }
+          } catch (error) {
+            // console.error('Erro durante a chamada ou processamento do stream:', error); // Log para depuração
+            // Exibe erro genérico se não foi tratado antes (ex: erro de rede)
+            // Evita duplicar a mensagem de erro se já foi exibida pelo tratamento do response.ok
+            if (
+              !chatBox.find('.message.ai-message:contains("Erro na API")')
+                .length &&
+              !chatBox.find('.message.ai-message:contains("Failed to connect")')
+                .length
+            ) {
+              // Verifica se já existe msg de erro
+              displayUserMessage(
+                escapeHtml(`Erro inesperado: ${error.message}`),
+                "ai"
+              );
+              // Remove a última mensagem do usuário do histórico se erro ocorreu antes da resposta
+              if (
+                conversationHistory.length > 0 &&
+                conversationHistory[conversationHistory.length - 1].role ===
+                  "user"
+              ) {
+                conversationHistory.pop();
+              }
+            }
+          } finally {
+            // Reabilita a interface independentemente de sucesso ou erro
+            // console.log("Bloco finally executado."); // Log para depuração
+            sendButton.prop("disabled", false);
+            userInput.prop("disabled", false);
+            userInput.focus(); // Coloca o foco de volta no input
+            // Garante que as variáveis de estado da IA sejam limpas
+            currentAiMessageElement = null;
+            accumulatedRawResponse = "";
+          }
+        }
+
+        // Função chamada ao enviar a mensagem (botão ou Enter)
+        function sendMessage() {
+          const text = userInput.val().trim();
+          // console.log("Tentando enviar mensagem:", text); // Log para depuração
+
+          if (text) {
+            displayUserMessage(text); // Exibe a mensagem do usuário imediatamente
+            conversationHistory.push({ role: "user", content: text }); // Adiciona ao histórico ANTES de enviar
+            userInput.val(""); // Limpa o input
+            resetTextareaHeight(); // Reseta a altura do input
+            callOllamaApi(); // Chama a API para obter a resposta da IA
+          }
+        }
+
+        // --- Event Listeners ---
+
+        // Clique no botão Enviar
+        sendButton.on("click", sendMessage);
+
+        // Digitação no textarea (para auto-resize)
+        userInput.on("input", autoResizeTextarea);
+
+        // Tecla pressionada no textarea (para enviar com Enter, nova linha com Shift+Enter)
+        userInput.on("keydown", function (e) {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault(); // Impede a criação de nova linha no textarea
+            sendMessage();
+          }
+        });
+
+        // Mudança no seletor de modelo
+        modelSelector.on("change", function () {
+          const newModel = $(this).val();
+          console.log("Modelo alterado para:", newModel);
+          // Opcional: Limpar histórico e chat ao trocar de modelo
+          // conversationHistory = [];
+          // chatBox.html(`<div class="message ai-message">Modelo alterado para <strong>${escapeHtml(newModel)}</strong>. O histórico foi limpo.</div>`);
+          // Ou apenas avisar:
+          chatBox.append(
+            `<div class="message ai-message" style="font-style: italic; color: #666; font-size: 0.9em;">Modelo alterado para <strong>${escapeHtml(
+              newModel
+            )}</strong>. A próxima mensagem iniciará uma nova conversa (ou continuará se o modelo entender o histórico anterior).</div>`
+          );
+          chatBox.scrollTop(chatBox[0].scrollHeight);
+        });
+
+        // Ajusta tamanho inicial do textarea ao carregar a página
+        autoResizeTextarea();
+
+        // Mensagem inicial
+        chatBox.append(
+          '<div class="message ai-message">Olá! Selecione um modelo e digite sua mensagem.</div>'
+        );
+      });
+    </script>
+  </body>
+</html>
